@@ -419,6 +419,7 @@
     <div class="field">
       <label>Urgency</label>
       <select id="fUrgency">
+        <option value="">No urgency</option>
         <option value="high" style="color:#e2483d;">▲ High</option>
         <option value="medium" style="color:#c77800;">＝ Medium</option>
         <option value="low" style="color:#4c9aff;">▾ Low</option>
@@ -546,8 +547,8 @@ function renderCard(item, idx) {
 
   const tagObjs = (item.tags || []).map(name => tags.find(t => t.name === name)).filter(Boolean);
   const tagHtml = tagObjs.map(t => `<span class="tag" style="background:${t.color}">${escapeHtml(t.name)}</span>`).join('');
-  const urgency = URGENCIES.find(u => u.id === item.urgency) || URGENCIES.find(u => u.id === 'medium');
-  const urgencyHtml = `<span class="urgency-badge" style="color:${urgency.color}"><span class="urgency-icon">${urgency.icon}</span>${urgency.label}</span>`;
+  const urgency = URGENCIES.find(u => u.id === item.urgency);
+  const urgencyHtml = urgency ? `<span class="urgency-badge" style="color:${urgency.color}"><span class="urgency-icon">${urgency.icon}</span>${urgency.label}</span>` : '';
 
   card.innerHTML = `
     <span class="card-rank">#${idx + 1}</span>
@@ -847,14 +848,14 @@ function openModal(id) {
     document.getElementById('fTitle').value = item.title;
     document.getElementById('fDesc').innerHTML = item.desc || '';
     document.getElementById('fStatus').value = item.status;
-    document.getElementById('fUrgency').value = item.urgency || 'medium';
+    document.getElementById('fUrgency').value = item.urgency || '';
     document.getElementById('fPm').value = item.pm || '';
     selectedTagNames = [...(item.tags || [])];
   } else {
     document.getElementById('fTitle').value = '';
     document.getElementById('fDesc').innerHTML = '';
     document.getElementById('fStatus').value = 'backlog';
-    document.getElementById('fUrgency').value = 'medium';
+    document.getElementById('fUrgency').value = '';
     document.getElementById('fPm').value = '';
     selectedTagNames = [];
   }
