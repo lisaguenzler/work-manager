@@ -292,6 +292,13 @@
     content: attr(data-placeholder);
     color: #97a0af;
   }
+  .desc-editable ul, .card-desc ul {
+    margin: 4px 0;
+    padding-left: 20px;
+  }
+  .desc-editable li, .card-desc li {
+    margin: 2px 0;
+  }
   .tag-picker {
     display: flex;
     flex-wrap: wrap;
@@ -517,7 +524,7 @@ function renderCard(item, idx) {
       <button class="icon-btn" title="Edit" onclick="event.stopPropagation(); openModal('${item.id}')">✎</button>
     </div>
     <p class="card-title">${escapeHtml(item.title)}</p>
-    ${item.desc ? `<p class="card-desc">${item.desc}</p>` : ''}
+    ${item.desc ? `<div class="card-desc">${item.desc}</div>` : ''}
     <div class="card-meta">
       <div class="tags">${tagHtml}</div>
       ${item.pm ? `<span class="pm-name"><span class="pm-avatar">${initials(item.pm)}</span>${escapeHtml(item.pm)}</span>` : ''}
@@ -589,10 +596,129 @@ function handleDescPaste(e) {
   }
 }
 
-function handleDescKeydown(e) {
-  if (e.key !== 'Enter') return;
+// ---- Description field: "- " at the start of a line becomes a bullet list ----
+function placeCaretAtStart(node, sel) {
+  const range = document.createRange();
+  if (node.firstChild) range.setStart(node.firstChild, 0);
+  else range.setStart(node, 0);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function placeCaretAfter(node, sel) {
+  const range = document.createRange();
+  range.setStartAfter(node);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function getClosestLi(sel) {
+  if (!sel || sel.rangeCount === 0) return null;
+  let node = sel.getRangeAt(0).startContainer;
+  if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+  const fDesc = document.getElementById('fDesc');
+  if (!node || !node.closest) return null;
+  const li = node.closest('li');
+  return (li && fDesc.contains(li)) ? li : null;
+}
+
+function maybeConvertToBullet(e) {
+  const ctx = getFDescRange();
+  if (!ctx || !ctx.range.collapsed) return;
+  const { range, sel } = ctx;
+  const container = range.startContainer;
+  const fDesc = document.getElementById('fDesc');
+  if (container.nodeType !== Node.TEXT_NODE) return;
+  if (container.parentElement !== fDesc) return;
+  if (range.startOffset !== 1 || container.textContent[0] !== '-') return;
+  const prev = container.previousSibling;
+  if (prev && prev.nodeName !== 'BR') return;
+
   e.preventDefault();
-  insertNodeAtSelection(document.createElement('br'));
+  const remainder = container.textContent.slice(1);
+  const li = document.createElement('li');
+  if (remainder) li.appendChild(document.createTextNode(remainder));
+  const ul = document.createElement('ul');
+  ul.appendChild(li);
+
+  fDesc.replaceChild(ul, container);
+  if (prev) prev.remove();
+
+  placeCaretAtStart(li, sel);
+}
+
+function exitList(li, sel) {
+  const ul = li.parentElement;
+  const before = [];
+  const after = [];
+  let seen = false;
+  Array.from(ul.children).forEach(child => {
+    if (child === li) { seen = true; return; }
+    (seen ? after : before).push(child);
+  });
+
+  const br = document.createElement('br');
+  if (before.length === 0 && after.length === 0) {
+    ul.replaceWith(br);
+  } else {
+    const frag = document.createDocumentFragment();
+    if (before.length) {
+      const ulBefore = document.createElement('ul');
+      before.forEach(c => ulBefore.appendChild(c));
+      frag.appendChild(ulBefore);
+    }
+    frag.appendChild(br);
+    if (after.length) {
+      const ulAfter = document.createElement('ul');
+      after.forEach(c => ulAfter.appendChild(c));
+      frag.appendChild(ulAfter);
+    }
+    ul.replaceWith(frag);
+  }
+  placeCaretAfter(br, sel);
+}
+
+function handleEnterInList(li, sel) {
+  if (li.textContent.trim() === '') {
+    exitList(li, sel);
+    return;
+  }
+  const range = sel.getRangeAt(0);
+  const afterRange = range.cloneRange();
+  afterRange.selectNodeContents(li);
+  afterRange.setStart(range.endContainer, range.endOffset);
+  const remainder = afterRange.extractContents();
+  const newLi = document.createElement('li');
+  newLi.appendChild(remainder);
+  li.after(newLi);
+  placeCaretAtStart(newLi, sel);
+}
+
+function handleDescKeydown(e) {
+  const sel = window.getSelection();
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const li = getClosestLi(sel);
+    if (li) handleEnterInList(li, sel);
+    else insertNodeAtSelection(document.createElement('br'));
+    return;
+  }
+
+  if (e.key === ' ') {
+    maybeConvertToBullet(e);
+    return;
+  }
+
+  if (e.key === 'Backspace' && sel && sel.isCollapsed) {
+    const li = getClosestLi(sel);
+    if (li && li.textContent.trim() === '') {
+      e.preventDefault();
+      exitList(li, sel);
+    }
+  }
 }
 
 // ---- Drag & drop ----
