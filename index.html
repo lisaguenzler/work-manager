@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wishlist</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50' y='78' font-size='90' text-anchor='middle'%3E%F0%9F%A4%B6%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --column-bg: #ebecf0;
+    --card-bg: #ffffff;
+    --text: #172b4d;
+    --text-muted: #5e6c84;
+    --border: #dfe1e6;
+    --accent: #6c5ce7;
+    --shadow: 0 1px 2px rgba(9, 30, 66, 0.15);
+    --shadow-hover: 0 4px 10px rgba(9, 30, 66, 0.18);
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    font-size: 20px;
+    margin: 0;
+    font-weight: 700;
+  }
+  header .sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .add-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: transform 0.08s ease, box-shadow 0.15s ease;
+  }
+  .add-btn:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding: 24px;
+    align-items: start;
+  }
+  .column {
+    background: var(--column-bg);
+    border-radius: var(--radius);
+    padding: 12px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    transition: background 0.12s ease;
+  }
+  .column.column-drag-over {
+    background: #e2defc;
+  }
+  .column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px 12px 8px;
+  }
+  .column-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .column-count {
+    background: rgba(9,30,66,0.08);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 1px 8px;
+    border-radius: 10px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .dot-backlog { background: #a5adba; }
+  .dot-blocked { background: #ff5630; }
+  .dot-progress { background: #0065ff; }
+  .dot-done { background: #36b37e; }
+
+  .card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 40px;
+    flex: 1;
+  }
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    box-shadow: var(--shadow);
+    cursor: grab;
+    transition: box-shadow 0.15s ease, transform 0.1s ease;
+    border: 1px solid transparent;
+    position: relative;
+  }
+  .card:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-1px);
+  }
+  .card.dragging {
+    opacity: 0.4;
+  }
+  .drop-placeholder {
+    border-radius: var(--radius);
+    background: #e2defc;
+    border: 2px dashed var(--accent);
+    min-height: 54px;
+  }
+
+  .card-rank {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #b3bac5;
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 26px 4px 0;
+    line-height: 1.35;
+  }
+  .card-desc {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin: 0 0 8px 0;
+    line-height: 1.4;
+  }
+  .card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tag {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+    color: #fff;
+  }
+  .pm-name {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .pm-avatar {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+  .card-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+  .card:hover .card-actions { opacity: 1; }
+  .card:hover .card-rank { display: none; }
+  .icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 3px 5px;
+    border-radius: 5px;
+  }
+  .icon-btn:hover { background: rgba(9,30,66,0.08); color: var(--text); }
+
+  .empty-hint {
+    font-size: 12px;
+    color: #a5adba;
+    text-align: center;
+    padding: 20px 8px;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(9,30,66,0.44);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: var(--radius);
+    width: 480px;
+    max-width: 92vw;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 24px;
+    box-shadow: 0 12px 30px rgba(9,30,66,0.3);
+  }
+  .modal h2 { margin: 0 0 16px 0; font-size: 17px; }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .field input[type="text"],
+  .field textarea,
+  .field select {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    background: #fafbfc;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fff;
+  }
+  .desc-editable {
+    width: 100%;
+    min-height: 64px;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fafbfc;
+    line-height: 1.4;
+  }
+  .desc-editable:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fff;
+  }
+  .desc-editable a, .card-desc a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .desc-editable:empty:before {
+    content: attr(data-placeholder);
+    color: #97a0af;
+  }
+  .tag-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .tag-chip {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    border: 2px solid transparent;
+    opacity: 0.55;
+  }
+  .tag-chip.selected { opacity: 1; border-color: rgba(0,0,0,0.25); }
+  .tag-chip .x { margin-left: 5px; opacity: 0.8; }
+  .new-tag-row { display: flex; gap: 6px; margin-top: 8px; }
+  .new-tag-row input[type="text"] { flex: 1; }
+  .color-swatches { display: flex; gap: 5px; }
+  .swatch {
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 2px solid transparent;
+  }
+  .swatch.selected { border-color: var(--text); }
+  .small-btn {
+    background: #ebecf0;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-secondary {
+    background: none;
+    border: 1px solid var(--border);
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-muted);
+  }
+  .btn-danger { color: #ff5630; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Wishlist</h1>
+    <div class="sub">Ranked work items — top of each column is what matters most</div>
+  </div>
+  <button class="add-btn" onclick="openModal()">+ New item</button>
+</header>
+
+<div class="board" id="board"></div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">New item</h2>
+    <input type="hidden" id="editId">
+
+    <div class="field">
+      <label>Title</label>
+      <input type="text" id="fTitle" placeholder="e.g. Redesign onboarding flow">
+    </div>
+
+    <div class="field">
+      <label>Description</label>
+      <div id="fDesc" class="desc-editable" contenteditable="true" data-placeholder="Short context — why it matters, what it involves. Highlight text and paste a URL to link it."></div>
+    </div>
+
+    <div class="field">
+      <label>Status</label>
+      <select id="fStatus">
+        <option value="backlog">Backlog</option>
+        <option value="blocked">Blocked</option>
+        <option value="progress">In Progress</option>
+        <option value="done">Done</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>PM / Requester</label>
+      <input type="text" id="fPm" placeholder="e.g. Julia">
+    </div>
+
+    <div class="field">
+      <label>Tags</label>
+      <div class="tag-picker" id="tagPicker"></div>
+      <div class="new-tag-row">
+        <input type="text" id="newTagName" placeholder="New tag name">
+        <div class="color-swatches" id="colorSwatches"></div>
+        <button class="small-btn" onclick="addNewTag()">Add</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary btn-danger" id="deleteBtn" style="display:none" onclick="deleteItem()">Delete</button>
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'priorityBoard.items';
+const TAGS_KEY = 'priorityBoard.tags';
+
+const STATUSES = [
+  { id: 'backlog', label: 'Backlog', dot: 'dot-backlog' },
+  { id: 'progress', label: 'In Progress', dot: 'dot-progress' },
+  { id: 'blocked', label: 'Blocked', dot: 'dot-blocked' },
+  { id: 'done', label: 'Done', dot: 'dot-done' },
+];
+
+const DEFAULT_TAG_COLORS = ['#6c5ce7', '#0065ff', '#ff5630', '#36b37e', '#ffab00', '#e91e8c', '#00b8d9', '#8993a4'];
+
+let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+let tags = JSON.parse(localStorage.getItem(TAGS_KEY) || 'null') || [
+  { name: 'Strategic', color: '#6c5ce7' },
+  { name: 'Quick win', color: '#36b37e' },
+  { name: 'Tech debt', color: '#8993a4' },
+];
+
+let selectedTagNames = [];
+let pendingColor = DEFAULT_TAG_COLORS[0];
+
+function persist() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  localStorage.setItem(TAGS_KEY, JSON.stringify(tags));
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function initials(name) {
+  if (!name) return '?';
+  return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+}
+
+function render() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  STATUSES.forEach(status => {
+    const colItems = items
+      .filter(i => i.status === status.id)
+      .sort((a, b) => a.order - b.order);
+
+    const col = document.createElement('div');
+    col.className = 'column';
+    col.dataset.status = status.id;
+
+    col.innerHTML = `
+      <div class="column-header">
+        <div class="column-title"><span class="dot ${status.dot}"></span>${status.label}</div>
+        <span class="column-count">${colItems.length}</span>
+      </div>
+      <div class="card-list" data-status="${status.id}"></div>
+    `;
+
+    const list = col.querySelector('.card-list');
+    if (colItems.length === 0) {
+      list.innerHTML = '<div class="empty-hint">Drop items here</div>';
+    } else {
+      colItems.forEach((item, idx) => {
+        list.appendChild(renderCard(item, idx));
+      });
+    }
+
+    attachDropZone(list);
+    attachColumnHighlight(col);
+    board.appendChild(col);
+  });
+}
+
+function attachColumnHighlight(col) {
+  col.addEventListener('dragenter', () => {
+    if (!dragId) return;
+    col.classList.add('column-drag-over');
+  });
+  col.addEventListener('dragover', (e) => e.preventDefault());
+  col.addEventListener('dragleave', (e) => {
+    if (!col.contains(e.relatedTarget)) col.classList.remove('column-drag-over');
+  });
+  col.addEventListener('drop', () => col.classList.remove('column-drag-over'));
+}
+
+function renderCard(item, idx) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.draggable = true;
+  card.dataset.id = item.id;
+
+  const tagObjs = (item.tags || []).map(name => tags.find(t => t.name === name)).filter(Boolean);
+  const tagHtml = tagObjs.map(t => `<span class="tag" style="background:${t.color}">${escapeHtml(t.name)}</span>`).join('');
+
+  card.innerHTML = `
+    <span class="card-rank">#${idx + 1}</span>
+    <div class="card-actions">
+      <button class="icon-btn" title="Edit" onclick="event.stopPropagation(); openModal('${item.id}')">✎</button>
+    </div>
+    <p class="card-title">${escapeHtml(item.title)}</p>
+    ${item.desc ? `<p class="card-desc">${item.desc}</p>` : ''}
+    <div class="card-meta">
+      <div class="tags">${tagHtml}</div>
+      ${item.pm ? `<span class="pm-name"><span class="pm-avatar">${initials(item.pm)}</span>${escapeHtml(item.pm)}</span>` : ''}
+    </div>
+  `;
+
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('a')) return;
+    openModal(item.id);
+  });
+  card.addEventListener('dragstart', onDragStart);
+  card.addEventListener('dragend', onDragEnd);
+
+  return card;
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ---- Description field: highlight text + paste a URL to link it ----
+function isUrl(text) {
+  const t = text.trim();
+  if (/\s/.test(t)) return false;
+  return /^(https?:\/\/|www\.)[^\s]+\.[^\s]+$/i.test(t);
+}
+
+function getFDescRange() {
+  const sel = window.getSelection();
+  const fDesc = document.getElementById('fDesc');
+  if (!sel || sel.rangeCount === 0) return null;
+  const range = sel.getRangeAt(0);
+  if (!fDesc.contains(range.commonAncestorContainer)) return null;
+  return { sel, range };
+}
+
+function insertNodeAtSelection(node) {
+  const ctx = getFDescRange();
+  if (!ctx) return;
+  const { sel, range } = ctx;
+  const anchorNode = node.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? node.lastChild : node;
+  range.deleteContents();
+  range.insertNode(node);
+  if (!anchorNode) return;
+  range.setStartAfter(anchorNode);
+  range.setEndAfter(anchorNode);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function handleDescPaste(e) {
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+  const ctx = getFDescRange();
+  const hasSelection = ctx && !ctx.sel.isCollapsed;
+
+  if (hasSelection && isUrl(text)) {
+    const linkText = ctx.range.toString();
+    const a = document.createElement('a');
+    a.href = /^https?:\/\//i.test(text) ? text : `https://${text}`;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = linkText;
+    insertNodeAtSelection(a);
+  } else {
+    insertNodeAtSelection(document.createTextNode(text));
+  }
+}
+
+function handleDescKeydown(e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  insertNodeAtSelection(document.createElement('br'));
+}
+
+// ---- Drag & drop ----
+let dragId = null;
+
+let placeholder = null;
+
+function getPlaceholder() {
+  if (!placeholder) {
+    placeholder = document.createElement('div');
+    placeholder.className = 'drop-placeholder';
+  }
+  return placeholder;
+}
+
+function onDragStart(e) {
+  dragId = e.currentTarget.dataset.id;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function onDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.column').forEach(c => c.classList.remove('column-drag-over'));
+  if (placeholder && placeholder.parentNode) placeholder.remove();
+  dragId = null;
+}
+
+function attachDropZone(list) {
+  list.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    if (!dragId) return;
+    const ph = getPlaceholder();
+    const cards = [...list.querySelectorAll('.card:not(.dragging)')];
+    let inserted = false;
+    for (const card of cards) {
+      const rect = card.getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height / 2) {
+        list.insertBefore(ph, card);
+        inserted = true;
+        break;
+      }
+    }
+    if (!inserted) list.appendChild(ph);
+    const emptyHint = list.querySelector('.empty-hint');
+    if (emptyHint) emptyHint.remove();
+  });
+
+  list.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (!dragId) return;
+    const ph = getPlaceholder();
+    const status = list.dataset.status;
+    const nextCard = ph.nextElementSibling;
+    const targetId = nextCard && nextCard.classList.contains('card') ? nextCard.dataset.id : null;
+    moveItem(dragId, status, targetId, true);
+    if (ph.parentNode) ph.remove();
+  });
+}
+
+function moveItem(id, newStatus, targetId, before) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+
+  item.status = newStatus;
+
+  const siblings = items
+    .filter(i => i.status === newStatus && i.id !== id)
+    .sort((a, b) => a.order - b.order);
+
+  let insertAt = siblings.length;
+  if (targetId) {
+    const idx = siblings.findIndex(i => i.id === targetId);
+    insertAt = before ? idx : idx + 1;
+  }
+
+  siblings.splice(insertAt, 0, item);
+  siblings.forEach((i, idx) => { i.order = idx; });
+
+  persist();
+  render();
+}
+
+// ---- Modal ----
+function openModal(id) {
+  const overlay = document.getElementById('modalOverlay');
+  document.getElementById('editId').value = id || '';
+  document.getElementById('deleteBtn').style.display = id ? 'inline-block' : 'none';
+  document.getElementById('modalTitle').textContent = id ? 'Edit item' : 'New item';
+
+  if (id) {
+    const item = items.find(i => i.id === id);
+    document.getElementById('fTitle').value = item.title;
+    document.getElementById('fDesc').innerHTML = item.desc || '';
+    document.getElementById('fStatus').value = item.status;
+    document.getElementById('fPm').value = item.pm || '';
+    selectedTagNames = [...(item.tags || [])];
+  } else {
+    document.getElementById('fTitle').value = '';
+    document.getElementById('fDesc').innerHTML = '';
+    document.getElementById('fStatus').value = 'backlog';
+    document.getElementById('fPm').value = '';
+    selectedTagNames = [];
+  }
+
+  renderTagPicker();
+  renderColorSwatches();
+  overlay.classList.add('open');
+  document.getElementById('fTitle').focus();
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function renderTagPicker() {
+  const picker = document.getElementById('tagPicker');
+  picker.innerHTML = tags.map(t => {
+    const sel = selectedTagNames.includes(t.name);
+    return `<span class="tag-chip ${sel ? 'selected' : ''}" style="background:${t.color}" onclick="toggleTag('${t.name}')">${escapeHtml(t.name)}<span class="x" onclick="event.stopPropagation(); removeTagDef('${t.name}')">&times;</span></span>`;
+  }).join('');
+}
+
+function toggleTag(name) {
+  if (selectedTagNames.includes(name)) {
+    selectedTagNames = selectedTagNames.filter(n => n !== name);
+  } else {
+    selectedTagNames.push(name);
+  }
+  renderTagPicker();
+}
+
+function removeTagDef(name) {
+  if (!confirm(`Remove tag "${name}" everywhere?`)) return;
+  tags = tags.filter(t => t.name !== name);
+  selectedTagNames = selectedTagNames.filter(n => n !== name);
+  items.forEach(i => { i.tags = (i.tags || []).filter(n => n !== name); });
+  persist();
+  renderTagPicker();
+}
+
+function renderColorSwatches() {
+  const el = document.getElementById('colorSwatches');
+  el.innerHTML = DEFAULT_TAG_COLORS.map(c =>
+    `<span class="swatch ${c === pendingColor ? 'selected' : ''}" style="background:${c}" onclick="pickColor('${c}')"></span>`
+  ).join('');
+}
+function pickColor(c) {
+  pendingColor = c;
+  renderColorSwatches();
+}
+
+function addNewTag() {
+  const input = document.getElementById('newTagName');
+  const name = input.value.trim();
+  if (!name) return;
+  if (tags.some(t => t.name.toLowerCase() === name.toLowerCase())) {
+    alert('Tag already exists');
+    return;
+  }
+  tags.push({ name, color: pendingColor });
+  selectedTagNames.push(name);
+  input.value = '';
+  persist();
+  renderTagPicker();
+}
+
+function saveItem() {
+  const id = document.getElementById('editId').value;
+  const title = document.getElementById('fTitle').value.trim();
+  if (!title) {
+    alert('Title is required');
+    return;
+  }
+  const desc = document.getElementById('fDesc').innerHTML.trim();
+  const status = document.getElementById('fStatus').value;
+  const pm = document.getElementById('fPm').value.trim();
+
+  if (id) {
+    const item = items.find(i => i.id === id);
+    const statusChanged = item.status !== status;
+    item.title = title;
+    item.desc = desc;
+    item.pm = pm;
+    item.tags = [...selectedTagNames];
+    if (statusChanged) {
+      item.status = status;
+      const maxOrder = Math.max(-1, ...items.filter(i => i.status === status && i.id !== id).map(i => i.order));
+      item.order = maxOrder + 1;
+    }
+  } else {
+    const maxOrder = Math.max(-1, ...items.filter(i => i.status === status).map(i => i.order));
+    items.push({
+      id: uid(),
+      title, desc, status, pm,
+      tags: [...selectedTagNames],
+      order: maxOrder + 1,
+    });
+  }
+
+  persist();
+  closeModal();
+  render();
+}
+
+function deleteItem() {
+  const id = document.getElementById('editId').value;
+  if (!id) return;
+  if (!confirm('Delete this item?')) return;
+  items = items.filter(i => i.id !== id);
+  persist();
+  closeModal();
+  render();
+}
+
+document.getElementById('fDesc').addEventListener('paste', handleDescPaste);
+document.getElementById('fDesc').addEventListener('keydown', handleDescKeydown);
+
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'modalOverlay') closeModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
+
+render();
+</script>
+</body>
+</html>
