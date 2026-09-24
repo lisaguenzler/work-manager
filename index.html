@@ -88,11 +88,6 @@
     justify-content: space-between;
     padding: 6px 8px 12px 8px;
   }
-  .column-header.collapsed-header {
-    justify-content: flex-start;
-    gap: 5px;
-    padding: 6px 4px 12px 4px;
-  }
   .collapse-toggle {
     background: none;
     border: none;
@@ -105,6 +100,9 @@
   }
   .collapse-toggle:hover { background: rgba(9,30,66,0.08); color: var(--text); }
   .collapsed-title {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
@@ -113,6 +111,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
   }
   .collapsed-list {
     display: flex;
@@ -569,17 +568,22 @@ function render() {
 
     if (collapsed) {
       col.innerHTML = `
-        <div class="column-header collapsed-header">
-          <button class="collapse-toggle" title="Expand column" onclick="toggleDoneCollapsed()">‹</button>
-          <span class="collapsed-title">${status.label} (${colItems.length})</span>
+        <div class="column-header">
+          <span class="collapsed-title">
+            <button class="collapse-toggle" title="Expand column" onclick="toggleDoneCollapsed()">‹</button>
+            ${status.label}
+          </span>
+          <span class="column-count">${colItems.length}</span>
         </div>
         <div class="card-list collapsed-list" data-status="${status.id}"></div>
       `;
     } else {
       col.innerHTML = `
         <div class="column-header">
-          <div class="column-title"><span class="dot ${status.dot}"></span>${status.label}</div>
-          ${status.id === 'done' ? '<button class="collapse-toggle" title="Collapse column" onclick="toggleDoneCollapsed()">«</button>' : ''}
+          <div class="column-title">
+            ${status.id === 'done' ? '<button class="collapse-toggle" title="Collapse column" onclick="toggleDoneCollapsed()">«</button>' : ''}
+            <span class="dot ${status.dot}"></span>${status.label}
+          </div>
           <span class="column-count">${colItems.length}</span>
         </div>
         <div class="card-list" data-status="${status.id}"></div>
