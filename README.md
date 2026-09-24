@@ -1,6 +1,6 @@
-# Wishlist board
+# Work manager board
 
-A single-file, drag-and-drop priority board (Backlog / In Progress / Blocked / Done). No build step, no server — just open `index.html` in a browser.
+A simple single-file, drag-and-drop priority board (Backlog / In Progress / Blocked / Done). No build step, no server — just open `index.html` in a browser.
 
 ## Using it
 
