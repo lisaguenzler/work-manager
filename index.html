@@ -89,9 +89,9 @@
     padding: 6px 8px 12px 8px;
   }
   .column-header.collapsed-header {
-    flex-direction: column;
-    gap: 6px;
-    padding: 0 0 8px 0;
+    justify-content: flex-start;
+    gap: 5px;
+    padding: 6px 4px 12px 4px;
   }
   .collapse-toggle {
     background: none;
@@ -101,27 +101,20 @@
     font-size: 13px;
     padding: 2px 5px;
     border-radius: 5px;
+    flex-shrink: 0;
   }
   .collapse-toggle:hover { background: rgba(9,30,66,0.08); color: var(--text); }
-  .collapsed-body {
-    display: flex;
-    gap: 6px;
-    flex: 1;
-  }
-  .collapsed-label {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
+  .collapsed-title {
     font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     color: var(--text-muted);
     white-space: nowrap;
-    padding-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .collapsed-list {
-    flex: 1;
-    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -577,13 +570,10 @@ function render() {
     if (collapsed) {
       col.innerHTML = `
         <div class="column-header collapsed-header">
-          <button class="collapse-toggle" title="Expand column" onclick="toggleDoneCollapsed()">»</button>
-          <span class="column-count">${colItems.length}</span>
+          <button class="collapse-toggle" title="Expand column" onclick="toggleDoneCollapsed()">‹</button>
+          <span class="collapsed-title">${status.label} (${colItems.length})</span>
         </div>
-        <div class="collapsed-body">
-          <div class="collapsed-label">${status.label}</div>
-          <div class="card-list collapsed-list" data-status="${status.id}"></div>
-        </div>
+        <div class="card-list collapsed-list" data-status="${status.id}"></div>
       `;
     } else {
       col.innerHTML = `
