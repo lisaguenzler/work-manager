@@ -56,6 +56,8 @@
     transition: transform 0.08s ease, box-shadow 0.15s ease;
   }
   .add-btn:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+  .add-btn-secondary { background: #42526e; }
 
   .board {
     display: grid;
@@ -386,7 +388,11 @@
     <h1>Wishlist</h1>
     <div class="sub">Ranked work items — top of each column is what matters most</div>
   </div>
-  <button class="add-btn" onclick="openModal()">+ New item</button>
+  <div class="header-actions">
+    <button class="add-btn add-btn-secondary" onclick="document.getElementById('jiraImportInput').click()">⇩ Import from file</button>
+    <input type="file" id="jiraImportInput" accept="application/json,.json" style="display:none" onchange="handleJiraImportFile(event)">
+    <button class="add-btn" onclick="openModal()">+ New item</button>
+  </div>
 </header>
 
 <div class="board" id="board"></div>
@@ -970,6 +976,80 @@ function deleteItem() {
   persist();
   closeModal();
   render();
+}
+
+// ---- Import tickets from a JSON file (e.g. exported by asking Claude to pull your assigned Jira tickets) ----
+const STATUS_ALIASES = {
+  backlog: 'backlog', todo: 'backlog', 'to do': 'backlog', open: 'backlog',
+  progress: 'progress', 'in progress': 'progress', 'in review': 'progress', doing: 'progress',
+  blocked: 'blocked', impediment: 'blocked',
+  done: 'done', closed: 'done', resolved: 'done',
+};
+function normalizeStatus(s) {
+  const key = String(s || '').trim().toLowerCase();
+  if (STATUS_ALIASES[key]) return STATUS_ALIASES[key];
+  return STATUSES.some(st => st.id === key) ? key : 'backlog';
+}
+
+const URGENCY_ALIASES = {
+  highest: 'high', high: 'high',
+  medium: 'medium', normal: 'medium',
+  low: 'low', lowest: 'low',
+};
+function normalizeUrgency(u) {
+  const key = String(u || '').trim().toLowerCase();
+  if (URGENCY_ALIASES[key]) return URGENCY_ALIASES[key];
+  return URGENCIES.some(x => x.id === key) ? key : '';
+}
+
+function importTickets(tickets) {
+  let added = 0;
+  let updated = 0;
+  tickets.forEach(t => {
+    if (!t || !t.key) return;
+    const status = normalizeStatus(t.status);
+    const urgency = normalizeUrgency(t.urgency);
+    const title = t.title || (t.summary ? `${t.key}: ${t.summary}` : t.key);
+    const existing = items.find(i => i.jiraKey === t.key);
+    if (existing) {
+      existing.title = title;
+      existing.status = status;
+      existing.urgency = urgency;
+      updated++;
+    } else {
+      const maxOrder = Math.max(-1, ...items.filter(i => i.status === status).map(i => i.order));
+      items.push({
+        id: uid(), title, desc: '', status, urgency, pm: '',
+        tags: [], order: maxOrder + 1, jiraKey: t.key,
+      });
+      added++;
+    }
+  });
+
+  persist();
+  render();
+  return { added, updated };
+}
+
+function handleJiraImportFile(e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    let tickets;
+    try {
+      tickets = JSON.parse(reader.result);
+      if (!Array.isArray(tickets)) throw new Error('not an array');
+    } catch (err) {
+      alert('Could not read that file — expected a JSON array of tickets.');
+      return;
+    }
+    const { added, updated } = importTickets(tickets);
+    alert(`Imported ${added} new ticket${added === 1 ? '' : 's'}, updated ${updated} existing.`);
+  };
+  reader.readAsText(file);
 }
 
 document.getElementById('fDesc').addEventListener('paste', handleDescPaste);
